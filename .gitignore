@@ -1,0 +1,8 @@
+venv
+images
+*.exe
+.DS_Store
+API/API
+database/schemas/
+.vscode
+schemas/
