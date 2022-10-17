@@ -2,13 +2,14 @@ import schedule
 import time
 from google.cloud import vision 
 from google.cloud import storage
+from event_handler import produce
 
 # Constants
 apikey = "./app/apikey.json"
 bucketname = "soa-vision-bucket"
 
 # [START vision_face_detection_gcs]
-def detect_emotions_cloud():
+def detect_emotions_cloud(n):
   """Detects faces in the file located in Google Cloud Storage or the web."""
 
   # Activate Google vision API using service account key
@@ -24,13 +25,11 @@ def detect_emotions_cloud():
   # Check if there
   if not blob_list:
     print("Bucket is empty")
-    return False
+    return []
   
   # List to save records
   records = []
   
-  # how many images to analyze
-  n = 3
   # Analize n blobs from the list
   for i in range(0, n):
     
@@ -40,9 +39,7 @@ def detect_emotions_cloud():
     
     # Get blob name
     blob_name = blob_list[i].name
-    print(f"Image - {i+1}")
-    print(f"Blob: {blob_name} analize.")
-    
+    print(f"Image {i+1} - {blob_name} analize.")
     # Build image path
     image_path = "gs://{0}/{1}".format(bucketname, blob_name)
 
@@ -59,33 +56,20 @@ def detect_emotions_cloud():
 
     # Names of likelihood from google.cloud.vision.enums
     likelihood_name = ('UNKNOWN', 'VERY_UNLIKELY', 'UNLIKELY', 'POSSIBLE','LIKELY', 'VERY_LIKELY')
+    acceptable = likelihood_name[3:]
     
-    
-    # # Get emotions of all faces
-    # emotions_json = []
-    # if faces:
-    #   for index, face in enumerate(faces):
-    #     emotions = []
-    #     emotions.append(index+1)
-    #     emotions.append(likelihood_name[face.joy_likelihood])
-    #     emotions.append(likelihood_name[face.sorrow_likelihood])
-    #     emotions.append(likelihood_name[face.anger_likelihood])
-    #     emotions.append(likelihood_name[face.surprise_likelihood])
-    #     emotions_json.append(emotions)
-    #     show(emotions)
-    #     records.append(emotions_json)
-    
+    # Get name from document.
+    name = blob_name.split('.')[0]
     # Get emotions of the first face (default)
+    person = { 'name':name, 'emotion':'undetermined' }
     if faces:
       face = faces[0]
-      emotions = []
-      emotions.append(likelihood_name[face.joy_likelihood])
-      emotions.append(likelihood_name[face.sorrow_likelihood])
-      emotions.append(likelihood_name[face.anger_likelihood])
-      emotions.append(likelihood_name[face.surprise_likelihood])
-      show(emotions=emotions)
-      records.append(emotions)
-    
+      if likelihood_name[face.joy_likelihood] in acceptable: person['emotion']='happy'
+      elif likelihood_name[face.sorrow_likelihood] in acceptable: person['emotion']='sad'
+      elif likelihood_name[face.anger_likelihood] in acceptable: person['emotion']='angry'
+      elif likelihood_name[face.surprise_likelihood] in acceptable: person['emotion']='surprised'
+      records.append(person)
+      
     # Delete the analyzed image.
     # delete_blob(bucket, blob_name)
     
@@ -95,7 +79,7 @@ def detect_emotions_cloud():
             'https://cloud.google.com/apis/design/errors'.format(
                 response.error.message))
       
-  return [True, records]
+  return records
 # [END vision_face_detection_gcs]
 
 
@@ -105,26 +89,24 @@ def delete_blob(bucket, blob_name):
   blob.delete()
   print(f"Blob: {blob_name} deleted.")
 
-# Function that prints the emotion to the terminal.
-# INPUT: emotions array.
-# OUTPUT: print the values with respective labels.
-def show(emotions):
-  print()
-  print('joy: {}'.format(emotions[0]))
-  print('sorrow: {}'.format(emotions[1]))
-  print('anger: {}'.format(emotions[2]))
-  print('surprise: {}\n'.format(emotions[3]))
 
+# Publish emotions to the queue
+def publish_emotions():
+  print()
+  # how many images to analyze
+  n = 3
+  json = detect_emotions_cloud(n)
+  if json: produce(json)
 
 # Function that handles the routine.
 def routine():
-    # After every x seconds.
-    schedule.every(10).seconds.do(detect_emotions_cloud)
-    
-    # Every 30  or 00:00 time.
-    # schedule.every().day.at("00:00").do(detect_emotions_cloud)
-    
-    # Loop
-    while True:
-      schedule.run_pending()
-      time.sleep(1)
+  # After every x seconds.
+  schedule.every(10).seconds.do(publish_emotions)
+  
+  # Every 30  or 00:00 time.
+  # schedule.every().day.at("00:00").do(publish_emotions)
+  
+  # Loop
+  while True:
+    schedule.run_pending()
+    time.sleep(1)
