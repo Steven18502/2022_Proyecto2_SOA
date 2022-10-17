@@ -109,17 +109,17 @@ def delete_blob(bucket, blob_name):
 # INPUT: emotions array.
 # OUTPUT: print the values with respective labels.
 def show(emotions):
-  print("\nFace", emotions[0])
-  print('joy: {}'.format(emotions[1]))
-  print('sorrow: {}'.format(emotions[2]))
-  print('anger: {}'.format(emotions[3]))
-  print('surprise: {}\n'.format(emotions[4]))
+  print()
+  print('joy: {}'.format(emotions[0]))
+  print('sorrow: {}'.format(emotions[1]))
+  print('anger: {}'.format(emotions[2]))
+  print('surprise: {}\n'.format(emotions[3]))
 
 
 # Function that handles the routine.
 def routine():
     # After every x seconds.
-    schedule.every(30).seconds.do(detect_emotions_cloud)
+    schedule.every(10).seconds.do(detect_emotions_cloud)
     
     # Every 30  or 00:00 time.
     # schedule.every().day.at("00:00").do(detect_emotions_cloud)
