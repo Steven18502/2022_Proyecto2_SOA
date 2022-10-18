@@ -8,14 +8,13 @@ import os
 def produce(message):
 
     # set parameter to establish connection
-    # host = os.environ['RABBIT_HOST']
-    # port = os.environ['RABBIT_PORT']
-    # queue = os.environ['RABBIT_PRODUCER_QUEUE']
-    queue = 'emotions_queue'
+    host = os.environ['RABBIT_HOST']
+    port = os.environ['RABBIT_PORT']
+    queue = os.environ['RABBIT_PRODUCER_QUEUE']
 
     # create a connection to the locally running rabbitmq message broker
-    connection_parameters = pika.ConnectionParameters('localhost')
-    # connection_parameters = pika.ConnectionParameters(host=host,port=port)
+    # connection_parameters = pika.ConnectionParameters('localhost')
+    connection_parameters = pika.ConnectionParameters(host=host,port=port)
 
     # save connection by passing our connection parameters
     connection = pika.BlockingConnection(connection_parameters)
@@ -27,9 +26,8 @@ def produce(message):
     channel.queue_declare(queue=queue)
     
     # publish message by using a default exchange (empty string)
-    
-    message = '[{"name": "Arthur", "emotion": "angry", "date": "17/10/2022 07:04 PM"}, {"name": "Cassandra", "emotion": "sad", "date": "17/10/2022 07:04 PM"}, {"name": "Evelyn", "emotion": "undetermined", "date": "17/10/2022 07:04 PM"}]'
-    channel.basic_publish(exchange='', routing_key=queue, body=message)
+    channel.basic_publish(exchange='', routing_key=queue, body=json.dumps(message))
     print(f"sent message: {message}")
 
+    # close connection
     connection.close()
