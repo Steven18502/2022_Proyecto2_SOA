@@ -27,7 +27,9 @@ def produce(message):
     channel.queue_declare(queue=queue)
     
     # publish message by using a default exchange (empty string)
-    channel.basic_publish(exchange='', routing_key=queue, body=json.dumps(message))
-    print(f"sent message: {json.dumps(message, indent=2)}")
+    
+    message = '[{"name": "Arthur", "emotion": "angry", "date": "17/10/2022 07:04 PM"}, {"name": "Cassandra", "emotion": "sad", "date": "17/10/2022 07:04 PM"}, {"name": "Evelyn", "emotion": "undetermined", "date": "17/10/2022 07:04 PM"}]'
+    channel.basic_publish(exchange='', routing_key=queue, body=message)
+    print(f"sent message: {message}")
 
     connection.close()

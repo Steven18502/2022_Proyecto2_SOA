@@ -3,6 +3,7 @@ import time
 from google.cloud import vision 
 from google.cloud import storage
 from event_handler import produce
+from datetime import datetime
 
 # Constants
 apikey = "./app/apikey.json"
@@ -25,7 +26,7 @@ def detect_emotions_cloud(n):
   # Check if there
   if not blob_list:
     print("Bucket is empty")
-    return []
+    return [1]
   
   # List to save records
   records = []
@@ -40,6 +41,7 @@ def detect_emotions_cloud(n):
     # Get blob name
     blob_name = blob_list[i].name
     print(f"Image {i+1} - {blob_name} analize.")
+    
     # Build image path
     image_path = "gs://{0}/{1}".format(bucketname, blob_name)
 
@@ -60,6 +62,7 @@ def detect_emotions_cloud(n):
     
     # Get name from document.
     name = blob_name.split('.')[0]
+    
     # Get emotions of the first face (default)
     person = { 'name':name, 'emotion':'undetermined' }
     if faces:
@@ -68,16 +71,20 @@ def detect_emotions_cloud(n):
       elif likelihood_name[face.sorrow_likelihood] in acceptable: person['emotion']='sad'
       elif likelihood_name[face.anger_likelihood] in acceptable: person['emotion']='angry'
       elif likelihood_name[face.surprise_likelihood] in acceptable: person['emotion']='surprised'
-      records.append(person)
-      
-    # Delete the analyzed image.
-    # delete_blob(bucket, blob_name)
     
+    # Set the current date
+    now = datetime.now() # current date and time
+    person['date'] = now.strftime("%d/%m/%Y %I:%M:%S %p")
+    records.append(person)
+
+    # Delete the analyzed image.
+    delete_blob(bucket, blob_name)
+
     if response.error.message:
-        raise Exception(
-            '{}\nFor more info on error messages, check: '
-            'https://cloud.google.com/apis/design/errors'.format(
-                response.error.message))
+      raise Exception(
+        '{}\nFor more info on error messages, check: '
+        'https://cloud.google.com/apis/design/errors'.format(
+          response.error.message))
       
   return records
 # [END vision_face_detection_gcs]
@@ -87,7 +94,7 @@ def delete_blob(bucket, blob_name):
   """Deletes a blob from the bucket."""
   blob = bucket.blob(blob_name)
   blob.delete()
-  print(f"Blob: {blob_name} deleted.")
+  # print(f"Blob: {blob_name} deleted.")
 
 
 # Publish emotions to the queue
